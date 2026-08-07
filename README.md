@@ -1,6 +1,87 @@
 # Waygood Study Abroad Backend Platform
 
-A production-ready, high-performance Node.js / Express / MongoDB backend built for the Waygood Study Abroad evaluation platform. Features secure JWT authentication, advanced university/program discovery, a MongoDB Aggregation Pipeline recommendation engine, an application workflow state machine, Redis caching, comprehensive unit/integration testing, Swagger API docs, and Docker multi-container setup.
+## Setup & Installation Instructions
+
+### Local Development Setup
+
+1. **Clone & Install Dependencies**
+   ```bash
+   cd backend
+   npm install
+   ```
+
+2. **Configure Environment Variables**
+   Create a `.env` file in `backend/`:
+   ```env
+   PORT=4000
+   MONGODB_URI=mongodb://127.0.0.1:27017/waygood-evaluation
+   JWT_SECRET=waygood-dev-secret-key-2026
+   JWT_EXPIRES_IN=1d
+   CACHE_TTL_SECONDS=300
+   REDIS_URL=
+   GROQ_API_KEY=your_groq_api_key_here
+   AI_MODEL=llama-3.3-70b-versatile
+   ```
+
+3. **Seed Database**
+   ```bash
+   npm run seed
+   ```
+
+4. **Start Development Server**
+   ```bash
+   npm run dev
+   ```
+   The API will run at `http://localhost:4000`.
+
+---
+
+## API Documentation & Interactive UI
+
+- **Swagger UI Interactive Docs**: Navigate to `http://localhost:4000/api/docs` in your browser.
+- **Postman Collection**: Import [Waygood_Postman_Collection.json](file:///d:/interassignment/docs/Waygood_Postman_Collection.json) into Postman.
+
+---
+
+## Suggested MongoDB Indexes
+
+To optimize high-volume queries in production, the following indexes are declared in models:
+
+1. **Student Collection**:
+   - `{ email: 1 }` (Unique) for instant login lookups.
+2. **University Collection**:
+   - `{ country: 1 }` for filtering.
+   - `{ popularScore: -1, qsRanking: 1 }` for sorted listing.
+   - `{ name: "text", country: "text", city: "text" }` text index for search.
+3. **Program Collection**:
+   - Compound index: `{ country: 1, degreeLevel: 1, field: 1, tuitionFeeUsd: 1 }` for discovery filters.
+   - Index on `university` foreign key.
+4. **Application Collection**:
+   - Compound unique index: `{ student: 1, program: 1, intake: 1 }` to prevent duplicate applications.
+   - `{ status: 1 }`, `{ destinationCountry: 1 }` for dashboard aggregation queries.
+
+---
+
+## Running Test Suite
+
+Run unit and integration tests using Jest and Supertest:
+```bash
+cd backend
+npm test
+```
+
+---
+
+## Docker Setup
+
+Run backend, MongoDB, and Redis using Docker Compose:
+```bash
+docker-compose up --build -d
+```
+Stop containers:
+```bash
+docker-compose down
+```
 
 ---
 
@@ -76,7 +157,46 @@ A production-ready, high-performance Node.js / Express / MongoDB backend built f
 - **Cache Invalidation**: Invalidates `dashboard-overview` cache whenever new applications are created or status changes.
 - **Lean Queries**: Applied `.lean()` across all read queries to omit Mongoose document overhead and maximize execution throughput.
 
----
+### 6. AI-Powered University Recommendation
+
+- **Endpoint:** `POST /api/ai/recommend`
+- Built using **Groq API** with the **OpenAI SDK**.
+- Generates personalized university and program recommendations based on:
+  - Preferred Country
+  - Budget
+  - Field of Study
+  - Target Intake
+  - IELTS Score
+  - CGPA
+- Retrieves matching universities from MongoDB and uses AI to:
+  - Rank universities by suitability.
+  - Generate match scores.
+  - Explain recommendation reasons.
+  - Estimate admission chances.
+  - Provide personalized application tips.
+- Implements prompt templates, response validation, retry/timeout handling, and Redis/Memory cache for improved performance.
+
+### 7. AI Study Abroad Planner
+
+- **Endpoint:** `POST /api/ai/study-plan`
+- Built using **Groq API** with the **OpenAI SDK**.
+- Generates a personalized month-by-month study abroad roadmap based on:
+  - Target Country
+  - Target Intake
+  - IELTS Progress
+  - CGPA
+  - Uploaded Documents
+- AI creates a structured timeline covering:
+  - University shortlisting
+  - IELTS preparation
+  - SOP & LOR preparation
+  - Scholarship applications
+  - University applications
+  - Visa process
+  - Financial planning
+  - Accommodation & travel
+- Returns structured JSON with timeline, personalized tips, and missing document recommendations.
+- Uses reusable prompt templates, input validation, caching, and robust error handling for production-ready AI integration.
 
 ## Project Structure
 
@@ -149,90 +269,7 @@ A production-ready, high-performance Node.js / Express / MongoDB backend built f
 └── README.md
 ```
 
----
 
-## Setup & Installation Instructions
-
-### Local Development Setup
-
-1. **Clone & Install Dependencies**
-   ```bash
-   cd backend
-   npm install
-   ```
-
-2. **Configure Environment Variables**
-   Create a `.env` file in `backend/`:
-   ```env
-   PORT=4000
-   MONGODB_URI=mongodb://127.0.0.1:27017/waygood-evaluation
-   JWT_SECRET=waygood-dev-secret-key-2026
-   JWT_EXPIRES_IN=1d
-   CACHE_TTL_SECONDS=300
-   REDIS_URL=
-   ```
-
-3. **Seed Database**
-   ```bash
-   npm run seed
-   ```
-
-4. **Start Development Server**
-   ```bash
-   npm run dev
-   ```
-   The API will run at `http://localhost:4000`.
-
----
-
-## API Documentation & Interactive UI
-
-- **Swagger UI Interactive Docs**: Navigate to `http://localhost:4000/api/docs` in your browser.
-- **Postman Collection**: Import [Waygood_Postman_Collection.json](file:///d:/interassignment/docs/Waygood_Postman_Collection.json) into Postman.
-
----
-
-## Suggested MongoDB Indexes
-
-To optimize high-volume queries in production, the following indexes are declared in models:
-
-1. **Student Collection**:
-   - `{ email: 1 }` (Unique) for instant login lookups.
-2. **University Collection**:
-   - `{ country: 1 }` for filtering.
-   - `{ popularScore: -1, qsRanking: 1 }` for sorted listing.
-   - `{ name: "text", country: "text", city: "text" }` text index for search.
-3. **Program Collection**:
-   - Compound index: `{ country: 1, degreeLevel: 1, field: 1, tuitionFeeUsd: 1 }` for discovery filters.
-   - Index on `university` foreign key.
-4. **Application Collection**:
-   - Compound unique index: `{ student: 1, program: 1, intake: 1 }` to prevent duplicate applications.
-   - `{ status: 1 }`, `{ destinationCountry: 1 }` for dashboard aggregation queries.
-
----
-
-## Running Test Suite
-
-Run unit and integration tests using Jest and Supertest:
-```bash
-cd backend
-npm test
-```
-
----
-
-## Docker Setup
-
-Run backend, MongoDB, and Redis using Docker Compose:
-```bash
-docker-compose up --build -d
-```
-Stop containers:
-```bash
-docker-compose down
-```
-
----
 
 ## Assumptions & Architecture Decisions
 
