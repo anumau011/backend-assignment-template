@@ -1,4 +1,4 @@
-﻿const applicationStatuses = [
+const applicationStatuses = [
   "draft",
   "submitted",
   "under-review",

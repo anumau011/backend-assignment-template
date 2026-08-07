@@ -1,0 +1,312 @@
+openapi: 3.0.0
+info:
+  title: Waygood Study Abroad Evaluation API
+  version: 1.0.0
+  description: Production-ready RESTful API for student authentication, university discovery, MongoDB aggregation recommendation engine, and application workflow state machine.
+servers:
+  - url: http://localhost:4000/api
+    description: Local Development Server
+
+paths:
+  /health:
+    get:
+      summary: Health check endpoint
+      responses:
+        '200':
+          description: API status and uptime
+
+  /auth/register:
+    post:
+      summary: Register a new student or counselor
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - fullName
+                - email
+                - password
+              properties:
+                fullName:
+                  type: string
+                  example: Aarav Malhotra
+                email:
+                  type: string
+                  example: aarav@example.com
+                password:
+                  type: string
+                  example: Candidate123!
+                role:
+                  type: string
+                  enum: [student, counselor]
+                  example: student
+                targetCountries:
+                  type: array
+                  items:
+                    type: string
+                  example: ["Canada", "UAE"]
+                interestedFields:
+                  type: array
+                  items:
+                    type: string
+                  example: ["Computer Science"]
+                preferredIntake:
+                  type: string
+                  example: September
+                maxBudgetUsd:
+                  type: number
+                  example: 23000
+                englishTest:
+                  type: object
+                  properties:
+                    exam:
+                      type: string
+                      example: IELTS
+                    score:
+                      type: number
+                      example: 7
+      responses:
+        '201':
+          description: Registration successful with JWT token
+        '400':
+          description: Validation error or email already exists
+
+  /auth/login:
+    post:
+      summary: Login user and retrieve JWT token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+                - password
+              properties:
+                email:
+                  type: string
+                  example: aarav@example.com
+                password:
+                  type: string
+                  example: Candidate123!
+      responses:
+        '200':
+          description: Authentication successful
+        '401':
+          description: Invalid email or password
+
+  /auth/me:
+    get:
+      summary: Fetch authenticated profile
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: User profile details
+        '401':
+          description: Unauthorized
+
+  /universities:
+    get:
+      summary: Discover universities with filtering, search, pagination, and sorting
+      parameters:
+        - in: query
+          name: country
+          schema:
+            type: string
+        - in: query
+          name: partnerType
+          schema:
+            type: string
+            enum: [direct, recruitment-partner, institution-partner]
+        - in: query
+          name: scholarshipAvailable
+          schema:
+            type: boolean
+        - in: query
+          name: q
+          schema:
+            type: string
+        - in: query
+          name: sortBy
+          schema:
+            type: string
+            enum: [name, ranking, popular]
+        - in: query
+          name: page
+          schema:
+            type: integer
+            default: 1
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 10
+      responses:
+        '200':
+          description: Paginated university results
+
+  /universities/popular:
+    get:
+      summary: Get top popular universities (cached)
+      responses:
+        '200':
+          description: Popular universities payload with cache hit/miss status
+
+  /programs:
+    get:
+      summary: Discover programs with filtering, search, pagination, and sorting
+      parameters:
+        - in: query
+          name: country
+          schema:
+            type: string
+        - in: query
+          name: degreeLevel
+          schema:
+            type: string
+            enum: [bachelor, master, diploma, certificate]
+        - in: query
+          name: field
+          schema:
+            type: string
+        - in: query
+          name: intake
+          schema:
+            type: string
+        - in: query
+          name: maxTuition
+          schema:
+            type: number
+        - in: query
+          name: scholarshipAvailable
+          schema:
+            type: boolean
+        - in: query
+          name: q
+          schema:
+            type: string
+        - in: query
+          name: sortBy
+          schema:
+            type: string
+            enum: [tuitionAsc, tuitionDesc, relevance]
+        - in: query
+          name: page
+          schema:
+            type: integer
+            default: 1
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 10
+      responses:
+        '200':
+          description: Paginated program results
+
+  /recommendations/{studentId}:
+    get:
+      summary: Generate program recommendations using MongoDB Aggregation Pipeline
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: studentId
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Top 5 recommended programs with match scores and dynamic reasons
+        '404':
+          description: Student not found
+
+  /applications:
+    get:
+      summary: List applications for student or counselor
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: query
+          name: studentId
+          schema:
+            type: string
+        - in: query
+          name: status
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Array of populated applications
+
+    post:
+      summary: Apply to a program (creates new application)
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - programId
+                - intake
+              properties:
+                programId:
+                  type: string
+                intake:
+                  type: string
+                  example: September
+                studentId:
+                  type: string
+                note:
+                  type: string
+      responses:
+        '201':
+          description: Application created successfully
+        '400':
+          description: Duplicate application or validation error
+
+  /applications/{id}/status:
+    patch:
+      summary: Update application status with state transition validation
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - status
+              properties:
+                status:
+                  type: string
+                  example: submitted
+                note:
+                  type: string
+                  example: Submitted academic transcripts
+      responses:
+        '200':
+          description: Status updated and timeline recorded
+        '400':
+          description: Invalid status transition
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT

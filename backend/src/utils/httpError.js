@@ -1,4 +1,4 @@
-﻿class HttpError extends Error {
+class HttpError extends Error {
   constructor(statusCode, message, details = null) {
     super(message);
     this.name = "HttpError";

@@ -1,4 +1,4 @@
-﻿const connectDatabase = require("../config/database");
+const connectDatabase = require("../config/database");
 const Application = require("../models/Application");
 const Program = require("../models/Program");
 const Student = require("../models/Student");

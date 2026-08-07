@@ -1,4 +1,4 @@
-﻿export const productSignals = [
+export const productSignals = [
   {
     label: "Business fit",
     value: "Study abroad discovery, planning, and applications",

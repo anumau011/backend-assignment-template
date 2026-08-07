@@ -1,4 +1,4 @@
-﻿const universities = [
+const universities = [
   {
     name: "Heriot-Watt University Dubai",
     country: "UAE",

@@ -1,4 +1,6 @@
-﻿export default function SignalStrip({ items }) {
+import React from "react";
+
+export default function SignalStrip({ items }) {
   return (
     <div className="signal-strip">
       {items.map((item) => (

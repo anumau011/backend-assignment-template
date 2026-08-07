@@ -1,4 +1,4 @@
-﻿const Program = require("../models/Program");
+const Program = require("../models/Program");
 const asyncHandler = require("../utils/asyncHandler");
 
 function parseBoolean(value) {
@@ -24,19 +24,19 @@ const listPrograms = asyncHandler(async (req, res) => {
   const filters = {};
 
   if (country) {
-    filters.country = country;
+    filters.country = { $regex: new RegExp(`^${country}$`, "i") };
   }
 
   if (degreeLevel) {
-    filters.degreeLevel = degreeLevel;
+    filters.degreeLevel = degreeLevel.toLowerCase();
   }
 
   if (field) {
-    filters.field = field;
+    filters.field = { $regex: field, $options: "i" };
   }
 
   if (intake) {
-    filters.intakes = intake;
+    filters.intakes = { $regex: new RegExp(`^${intake}$`, "i") };
   }
 
   if (maxTuition) {
@@ -49,15 +49,18 @@ const listPrograms = asyncHandler(async (req, res) => {
   }
 
   if (q) {
+    const searchRegex = { $regex: q, $options: "i" };
     filters.$or = [
-      { title: { $regex: q, $options: "i" } },
-      { universityName: { $regex: q, $options: "i" } },
-      { field: { $regex: q, $options: "i" } },
+      { title: searchRegex },
+      { universityName: searchRegex },
+      { field: searchRegex },
+      { country: searchRegex },
+      { city: searchRegex },
     ];
   }
 
   const pageNumber = Math.max(Number(page), 1);
-  const pageSize = Math.min(Math.max(Number(limit), 1), 50);
+  const pageSize = Math.min(Math.max(Number(limit), 1), 100);
 
   const sortMap = {
     tuitionAsc: { tuitionFeeUsd: 1 },
@@ -65,9 +68,12 @@ const listPrograms = asyncHandler(async (req, res) => {
     relevance: { scholarshipAvailable: -1, tuitionFeeUsd: 1 },
   };
 
+  const selectedSort = sortMap[sortBy] || sortMap.relevance;
+
   const [items, total] = await Promise.all([
     Program.find(filters)
-      .sort(sortMap[sortBy] || sortMap.relevance)
+      .populate("university", "name country city partnerType qsRanking scholarshipAvailable popularScore")
+      .sort(selectedSort)
       .skip((pageNumber - 1) * pageSize)
       .limit(pageSize)
       .lean(),

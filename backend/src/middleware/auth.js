@@ -1,4 +1,4 @@
-﻿const jwt = require("jsonwebtoken");
+const jwt = require("jsonwebtoken");
 
 const env = require("../config/env");
 const Student = require("../models/Student");
@@ -9,14 +9,14 @@ const requireAuth = asyncHandler(async (req, res, next) => {
   const authorizationHeader = req.headers.authorization;
 
   if (!authorizationHeader || !authorizationHeader.startsWith("Bearer ")) {
-    throw new HttpError(401, "Authorization token missing.");
+    throw new HttpError(401, "Authentication required. Bearer token missing.");
   }
 
   const token = authorizationHeader.replace("Bearer ", "").trim();
 
   try {
     const decoded = jwt.verify(token, env.jwtSecret);
-    const student = await Student.findById(decoded.sub).select("-password");
+    const student = await Student.findById(decoded.sub).select("-password").lean();
 
     if (!student) {
       throw new HttpError(401, "Authenticated user no longer exists.");
@@ -25,10 +25,33 @@ const requireAuth = asyncHandler(async (req, res, next) => {
     req.user = student;
     next();
   } catch (error) {
-    throw new HttpError(401, "Invalid or expired token.");
+    if (error instanceof HttpError) {
+      throw error;
+    }
+    throw new HttpError(401, "Invalid or expired authentication token.");
   }
 });
 
+function requireRole(...allowedRoles) {
+  return (req, res, next) => {
+    if (!req.user) {
+      return next(new HttpError(401, "Authentication required."));
+    }
+
+    if (!allowedRoles.includes(req.user.role)) {
+      return next(
+        new HttpError(
+          403,
+          `Access denied. Requires one of the following roles: ${allowedRoles.join(", ")}`
+        )
+      );
+    }
+
+    next();
+  };
+}
+
 module.exports = {
   requireAuth,
+  requireRole,
 };
