@@ -2,7 +2,7 @@ openapi: 3.0.0
 info:
   title: Waygood Study Abroad Evaluation API
   version: 1.0.0
-  description: Production-ready RESTful API for student authentication, university discovery, MongoDB aggregation recommendation engine, and application workflow state machine.
+  description: Production-ready RESTful API for student authentication, university discovery, MongoDB aggregation recommendation engine, AI-powered recommendations/study-plans via Groq, and application workflow state machine.
 servers:
   - url: http://localhost:4000/api
     description: Local Development Server
@@ -224,6 +224,85 @@ paths:
           description: Top 5 recommended programs with match scores and dynamic reasons
         '404':
           description: Student not found
+
+  /ai/recommend:
+    post:
+      summary: Generate AI-powered personalized university recommendations via Groq API
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - preferredCountry
+                - budget
+                - field
+                - intake
+                - ielts
+                - cgpa
+              properties:
+                preferredCountry:
+                  type: string
+                  example: Canada
+                budget:
+                  type: number
+                  example: 30000
+                field:
+                  type: string
+                  example: Computer Science
+                intake:
+                  type: string
+                  example: Fall
+                ielts:
+                  type: number
+                  example: 7
+                cgpa:
+                  type: number
+                  example: 8.2
+      responses:
+        '200':
+          description: Ranked university recommendations with match scores and admission tips
+
+  /ai/study-plan:
+    post:
+      summary: Generate an AI-powered personalized study-abroad timeline via Groq API
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - country
+                - targetIntake
+                - currentIELTS
+                - targetIELTS
+                - cgpa
+              properties:
+                country:
+                  type: string
+                  example: Canada
+                targetIntake:
+                  type: string
+                  example: Fall 2027
+                currentIELTS:
+                  type: number
+                  example: 6
+                targetIELTS:
+                  type: number
+                  example: 7
+                cgpa:
+                  type: number
+                  example: 8.2
+                documentsUploaded:
+                  type: array
+                  items:
+                    type: string
+                  example: ["Passport"]
+      responses:
+        '200':
+          description: Month-by-month study abroad roadmap and preparation tips
 
   /applications:
     get:
